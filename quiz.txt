@@ -187,3 +187,4 @@ struct UnnamedClosureClass
 };
 A: Tak. Kompilator dokładnie w ten sposób generuje generyczne lambdy.
 
+
