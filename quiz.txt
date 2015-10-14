@@ -1,0 +1,192 @@
+1. Na początek parę słów o nas
+2. Potem co to jest modern c++ - historia standaryzacji C++, które wersje komplatorów co wspierają, jak włączyć obsługę nowego c++ flagą kompilatora
+3. Pytania do publiczności. Jak ktoś dobrze odpowie to niech wytłumaczy. Jak nie to my tłumaczymy, pokazujemy slajd z wytłumaczeniem.
+
+
+Q1: Które ze słów kluczowych weszły do standardu języka C++11?
+a) alignas
+b) alignof
+c) char16_t
+d) char32_t
+e) constexpr
+f) decltype
+g) noexcept
+h) nullptr
+i) static_assert
+j) thread_local
+A: Wszystkie
+
+
+Q2: Przekazujemy pusty wskaźnik do funkcji bar - bar(nullptr);
+Która z jej przeciążonych wersji zostanie wywołana?
+a) void bar(int);
+b) void bar(void*);
+c) void bar(nullptr_t);
+A: c. A jeśli nie istnieje to b. Ale na pewno nie a.
+
+
+Q3: auto something = {1, 2, 3, 4, 5};
+Jakiego typu jest zmienna auto?
+a) std::vector<int>
+b) std::initializer_list<int>
+c) std::array<int, 5>
+d) int[]
+A: b
+Na slajdzie można pokazać że initializer listy można użyć do zainicjalizowania wszystkich innych typów
+
+
+Q4: Czy to jest poprawny zapis?
+std::array<int, 3> a1{1, 2, 3};
+A: W C++14 poprawny. W C++11 trzeba zapisać std::array<int, 3> a1{ {1, 2, 3} };
+
+	
+Q5: Czy to jest poprawny zapis?
+std::array<int, 3> a2 = {1, 2, 3};
+A: a. poprawny. Po = nie trzeba nigdy podwójnych nawiasów {{}}
+
+
+Q6: Poprawnie czy nie? (example by Bartek Szurgot)
+1 std::map<int, std::string> m;
+2 // ... filling m ...
+3 for(std::pair<int, std::string> const& elem: m)
+4 cout << elem.first << " -> " << elem.second << endl;
+A: Nie. Poprawnie to:
+1 std::map<int, std::string> m;
+2 // ... filling m ...
+3 for(std::pair<const int, std::string> const& elem: m) // <-- !!!
+4 cout << elem.first << " -> " << elem.second << endl;
+albo prościej:
+1 std::map<int, std::string> m;
+2 // ... filling m ...
+3 for(auto const& elem: m) // read as: "just use the right type" :-D
+4 cout << elem.first << " -> " << elem.second << endl;
+
+
+Q7: Jakiego typu jest g1?
+Gadget items[10];
+auto g1 = items;
+A: Gadget*. Można pokazac slajd z przykładem i omówić std::decay (example from http://en.cppreference.com/w/cpp/types/decay) w przypadku braku * i &
+Gadget items[10];
+auto g1 = items;   // g1 : Gadget*
+auto& g2 = items;  // g2 : Gadget(&)[10] - reference to an array
+
+
+Q8: W porządku czy nie?
+void print(const int& x);
+std::vector<int> vec = { 1, 2, 3, 4, 5 };
+for(auto item : vec)
+{
+    print(item);
+}
+A: Zadziała, aczkolwiek można lepiej - for(const auto& item : vec) 
+
+
+Q9: Zadziała czy nie?
+auto get_name(int id)
+{
+    if (id == 1)
+        return "Gadget"s;
+    else if (id == 2)
+        return "SuperGadget"s;
+    return string("Unknown");
+}
+A: Tak w C++14 - generyczna lambda. Pokazać slajd kiedy kompilator może wydedukować typ.
+
+
+Q10: Skompiluje się?
+int array[] = { 1, 2, 5.5 };
+A: C++98 - OK, C++11: error - implicit type narrowing
+
+
+Q11: Czy luźną funkcję (spoza klasy) można oznaczyć słowem kluczowym delete?
+A: Można. Slajd pokazać, że przydatne przy przeciążaniu - mamy błąd kompilacji dla niektórych typów.
+
+
+Q12: Które specyfikatory override są użyte poprawnie?
+struct A
+{
+   virtual void foo() = 0;
+   void dd() {}
+};
+
+struct B : A
+{
+void foo() override {}
+void bar() override {}
+void dd() override {}
+}
+a) void foo() override {}
+b) void bar() override {}
+c) void dd() override {}
+A: Tylko a. b nie istnieje w bazowej, a c nie jest virtual (slajd)
+
+
+Q13: Czy kod jest poprawny?
+struct A
+{
+   void bar() const final
+   {}
+};
+
+struct B : A
+{
+   void bar() const
+   {}
+};
+A: Nie. bar nie jest virtual i się nie kompiluje. (slajd z działaniem final)
+
+
+Q14: Czy jest jakaś różnica?
+1 auto x = std::make_shared<std::string>("hello, world!");
+2 std::shared_ptr<std::string> y {new std::string("hello, world!")};
+A: Tak. make_shared jest szybsze, gdyż alokuje stringa razem ze licznikami referencji w jednym segmencie pamięci. użycie new może być wolniejsze, bo nie ma gwarancji gdzie będzie alokacja.
+
+
+Q15: Która linijka się nie kompiluje?
+1 [](){};
+2 []{};
+3 {};
+4 []();
+5 [];
+6 ();
+7 [](){}();
+A: 4, 5, 6 się nie kompilują. 1 i 2 to poprawne lambdy. 3 to same nawiasy zakresu, nic nie wnoszą. 7 to poprawna lambda i od razu jej wywołanie.
+
+
+Q16: Co wypisze ten kod?
+struct Sth
+{
+  int* a = new int(2);
+  int b = 3;
+  
+  Sth()
+  {
+    std::cout << [&](){ return *a + this->b; }() << std::endl;
+  }
+};
+
+int main()
+{
+    Sth s;
+}
+A: 5. Przy okazji widać inicjalizację memberów w klasie, też można o tym opowiedzieć, że teraz jest to możliwe od C++11.
+
+
+Q17: jw, tylko 
+std::cout << [a,b](){ return *a + b; }() << std::endl;
+A: Błąd kompilacji. a i b nie ma w zakresie, są one memberami klasy, więc aby je dostac musimy dodać na capture-list this. This jest automatycznie łapany jeśli damy [=] lub [&] (slajd dorobić o tym co jest kiedy łapane przez capture list)
+
+
+Q18: Generyczne lambdy. Czy lamba i poniższa struktura są sobie równoważne?
+auto lambda = [](auto x, auto y) { return x + y; }
+
+struct UnnamedClosureClass
+{
+    template <typename T1, typename T2>
+    auto operator()(T1 x, T2 y) const 
+    {
+        return x + y;
+    }
+};
+A: Tak. Kompilator dokładnie w ten sposób generuje generyczne lambdy.
+
