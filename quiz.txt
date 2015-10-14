@@ -42,33 +42,30 @@ A: W C++14 poprawny. W C++11 trzeba zapisać std::array<int, 3> a1{ {1, 2, 3} };
 	
 Q5: Czy to jest poprawny zapis?
 std::array<int, 3> a2 = {1, 2, 3};
-A: a. poprawny. Po = nie trzeba nigdy podwójnych nawiasów {{}}
+A: Poprawny. Po = nie trzeba nigdy podwójnych nawiasów {{}}
 
 
 Q6: Poprawnie czy nie? (example by Bartek Szurgot)
-1 std::map<int, std::string> m;
-2 // ... filling m ...
-3 for(std::pair<int, std::string> const& elem: m)
-4 cout << elem.first << " -> " << elem.second << endl;
+std::map<int, std::string> m;
+// ... filling m ...
+for(std::pair<int, std::string> const& elem: m)
+cout << elem.first << " -> " << elem.second << endl;
 A: Nie. Poprawnie to:
-1 std::map<int, std::string> m;
-2 // ... filling m ...
-3 for(std::pair<const int, std::string> const& elem: m) // <-- !!!
-4 cout << elem.first << " -> " << elem.second << endl;
+std::map<int, std::string> m;
+// ... filling m ...
+for(std::pair<const int, std::string> const& elem: m) // <-- !!!
+cout << elem.first << " -> " << elem.second << endl;
 albo prościej:
-1 std::map<int, std::string> m;
-2 // ... filling m ...
-3 for(auto const& elem: m) // read as: "just use the right type" :-D
-4 cout << elem.first << " -> " << elem.second << endl;
+std::map<int, std::string> m;
+// ... filling m ...
+for(auto const& elem: m) // read as: "just use the right type" :-D
+cout << elem.first << " -> " << elem.second << endl;
 
 
 Q7: Jakiego typu jest g1?
 Gadget items[10];
 auto g1 = items;
 A: Gadget*. Można pokazac slajd z przykładem i omówić std::decay (example from http://en.cppreference.com/w/cpp/types/decay) w przypadku braku * i &
-Gadget items[10];
-auto g1 = items;   // g1 : Gadget*
-auto& g2 = items;  // g2 : Gadget(&)[10] - reference to an array
 
 
 Q8: W porządku czy nie?
@@ -90,7 +87,7 @@ auto get_name(int id)
         return "SuperGadget"s;
     return string("Unknown");
 }
-A: Tak w C++14 - generyczna lambda. Pokazać slajd kiedy kompilator może wydedukować typ.
+A: Tak w C++14 - automatyczna dedukcja typu zwracanego z funkcji. Pokazać slajd kiedy kompilator może wydedukować typ.
 
 
 Q10: Skompiluje się?
