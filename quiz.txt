@@ -188,3 +188,270 @@ struct UnnamedClosureClass
 A: Tak. Kompilator dokładnie w ten sposób generuje generyczne lambdy.
 
 
+Q19: Jaki będzie wynik działania następującego kodu?:
+
+template<class T>
+void foo(T v)
+{
+	std::cout << v << std::endl;
+}
+
+foo({1,2,3,4,5});
+A: Nie skompiluje się, dedukcja typu w szablonie dla std::initializer_list powoduje błąd kompilacji. Przy auto nie.
+
+
+Q20: Jaki będzie wynik działania następującego kodu?:
+
+template<class T>
+void foo(T v)
+{
+	std::cout << v << std::endl;
+}
+
+auto v = {1,2,3,4,5};
+foo(v);
+A: Nie skompiluje się, ponieważ nie ma operatora << dla std::initializer_list. Natomiast poniższy się skompiluje:
+
+template<class T>
+void foo(T v)
+{
+    for(auto const& i : v)
+    {
+        std::cout << i << std::endl;
+    }
+}
+
+auto v = {1,2,3,4,5};
+foo(v);
+
+
+Q21: Czy poniższy kod się skompiluje?:
+struct RvalueRefTest
+{
+    void talk()
+    {
+    }
+
+    void talk() &&
+    {
+    }
+};
+
+A: Nie, nie można przeciążyć funkcji z && i bez żadnego kwalifikatora.
+Q21a: A co to za kwalifikator? Kwalifikator dostępu dla r-value
+Q21b: Jak to naprawić? usunąć && lub dodać talk() &
+
+Q22: Jaki będzie wynik wykonania poniższego kodu:
+
+struct RvalueRefTest
+{
+    void talk() const&
+    {
+        std::cout << "Hello A" << endl;
+    }
+
+    void talk() const&&
+    {
+        std::cout << "Hello B" << endl;
+    }
+
+    void talk() &
+    {
+        std::cout << "Hello C" << endl;
+    }
+
+    void talk() &&
+    {
+        std::cout << "Hello D" << endl;
+    }
+};
+
+auto const returnValue()
+{
+    return RvalueRefTest();
+}
+
+auto const& va = RvalueRefTest();
+auto && vb = RvalueRefTest();
+auto vc = RvalueRefTest();
+va.talk();
+vb.talk();
+vc.talk();
+RvalueRefTest().talk();
+returnDupa().talk();
+
+A: Pytać po kolei i pokazywać
+va.talk();				// Hello A
+vb.talk();				// Hello C
+vc.talk();				// Hello C
+RvalueRefTest().talk();	// Hello D
+returnValue().talk();	// Hello B
+
+Q22a: co jeśli usuniemy: ""void talk() const&"". A: va.talk(); się nie skompiluje
+Q22b: co jeśli usuniemy: ""void talk() const&&"". A: zamiast "returnValue().talk();	// Hello B" będzie "returnValue().talk();	// Hello A"
+Q22c: co jeśli usuniemy: ""void talk() &"". A: zamiast
+vb.talk();				// Hello C
+vc.talk();				// Hello C
+
+będzie:
+
+vb.talk();				// Hello A
+vc.talk();				// Hello A
+Q22d: co jeśli usuniemy: ""void talk() &&"". A: zamiast "RvalueRefTest().talk();	// Hello D" będzie "returnValue().talk();	// Hello B"
+
+Q23: W jaki sposób złapać std::unique_ptr w lambdę?
+A: Wykorzystać zmienne przechwytujace: [v=std::make_unique<A>()](){a;}
+Q23a: Jak to zrobić w C++11?
+A: std::bind([](std::unique_ptr<A> const& arg){a;}, std::make_unique<A>());
+
+    auto f = std::bind([](std::unique_ptr<int> const& a, int b) {
+            std::cout << *a + b << std::endl;
+    }, std::make_unique<int>(42), std::placeholders::_1);
+
+
+Q24: Co się stanie?:
+struct RvalueRefTest
+{
+    void talk() const&
+    {
+        std::cout << "Hello A" << endl;
+    }
+
+    void talk() const&&
+    {
+        std::cout << "Hello B" << endl;
+    }
+
+    void talk() &
+    {
+        std::cout << "Hello C" << endl;
+    }
+
+    void talk() &&
+    {
+        std::cout << "Hello D" << endl;
+    }
+};
+
+decltype(auto) declFoo()
+{
+    RvalueRefTest x;
+    return x;
+}
+
+decltype(auto) declBar()
+{
+    RvalueRefTest x;
+    return(x);
+}
+
+declFoo().talk();
+declBar().talk();
+
+A: 
+declFoo().talk();	// Hello D
+declBar().talk();	// Hello C
+
+return x; zwraca kopię, która jest wartością r-value, więc jest OK.
+return(x); powoduję dedukcję l-value reference, czyli w tym przypadku zwrócenie wartości tymczasowej, która przestaje właśnie istnieć. VERY BAD.
+
+
+Q25: Czy podany kod się skompiluje?:
+void inceptA(void inceptB(void(void(void(void)))) {}
+A: Oczywiście że tak, to funkcja przyjmująca wskaźnik do funkcji, która przyjmuje wskaźnik do funkcji, która przyjmuje wskaźnik do funkcji, która przyjmuje wskaźnik do funkcji.
+
+Q26: Co się stanie?:
+struct AAAAA
+{
+    static const int VALUE = 213;
+};
+
+std::cout << AAAAA::VALUE << std::endl;
+A: zostanie wyprintowane 213.
+
+Q26a:
+A teraz:
+std::cout << &AAAAA::VALUE << std::endl;
+
+A: Błąd kompilacji, ponieważ wartość VALUE nie ma dowiązania.
+
+Q26b: Jak to naprawić?
+A: Dodać: const int AAAAA::VALUE;
+
+
+Q27: Mamy klasę i funkcje:
+
+struct FooCheck
+{
+    FooCheck()
+    {
+        std::cout << "RVO_test()" << std::endl;
+    }
+
+    FooCheck(FooCheck &)
+    {
+        std::cout << "RVO_test(RVO_test &)" << std::endl;
+    }
+
+    FooCheck(FooCheck &&)
+    {
+        std::cout << "RVO_test(RVO_test &&)" << std::endl;
+    }
+
+    ~FooCheck()
+    {
+        std::cout << "~RVO_test()" << std::endl;
+    }
+};
+
+FooCheck rvoTestA()
+{
+    FooCheck a;
+    return a;
+}
+
+FooCheck rvoTestB()
+{
+    FooCheck b;
+    return std::move(b);
+}
+
+FooCheck rvoTestC(FooCheck c)
+{
+    return c;
+}
+
+FooCheck rvoTestD(FooCheck d)
+{
+    return std::move(d);
+}
+
+std::cout << "--RVO A--" << std::endl;		// Tu jest RVO
+auto rvoa = rvoTestA();
+std::cout << "--RVO B--" << std::endl;		// Brak RVO
+auto rvob = rvoTestB();
+std::cout << "--RVO C--" << std::endl;		// Brak RVO
+auto rvoc = rvoTestC(rvoa);
+std::cout << "--RVO D--" << std::endl;		// Brak RVO
+auto rvod = rvoTestD(rvoa);
+
+Jaki będzie wynik? (może rozbić na kilka?)
+--RVO A--
+RVO_test()
+--RVO B--
+RVO_test()
+RVO_test(RVO_test &&)
+~RVO_test()
+--RVO C--
+RVO_test(RVO_test &)
+RVO_test(RVO_test &&)
+~RVO_test()
+--RVO D--
+RVO_test(RVO_test &)
+RVO_test(RVO_test &&)
+~RVO_test()
+~RVO_test()
+~RVO_test()
+~RVO_test()
+~RVO_test()
+
